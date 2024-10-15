@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
-void main() => runApp(MyApp());
+void main() => runApp(const MyApp());
 
 class CardModel {
   String front;
@@ -24,9 +24,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Memory Card Game',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.green,
       ),
-      home: MemoryCardGame(),
+      home: const MemoryCardGame(),
     );
   }
 }
@@ -42,6 +42,10 @@ class _MemoryCardGameState extends State<MemoryCardGame> {
   late List<CardModel> cards;
   late List<int> selectedCards;
   late bool isBusy;
+  late int score;
+  late int timeElapsed;
+  late Timer timer;
+  int consecutiveMatches = 0;
 
   final int gridSize = 4; // Change grid size here
 
@@ -53,18 +57,18 @@ class _MemoryCardGameState extends State<MemoryCardGame> {
 
   void initializeGame() {
     List<String> icons = [
-      '🍎',
-      '🍌',
-      '🥑',
-      '🍉',
-      '🍓',
-      '🍍',
-      '🥭',
-      '🍒',
-      '🥝',
-      '🍇',
-      '🍊',
-      '🍋'
+      '🐶',
+      '🐱',
+      '🐰',
+      '🦊',
+      '🐻',
+      '🐼',
+      '🐨',
+      '🐯',
+      '🐷',
+      '🐸',
+      '🦁',
+      '🐵'
     ];
     int totalPairs = (gridSize * gridSize) ~/ 2;
     if (icons.length < totalPairs) {
@@ -78,6 +82,16 @@ class _MemoryCardGameState extends State<MemoryCardGame> {
     cards.shuffle();
     selectedCards = [];
     isBusy = false;
+    score = 0;
+    timeElapsed = 0;
+    consecutiveMatches = 0;
+
+    // Start timer
+    timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        timeElapsed++;
+      });
+    });
   }
 
   Future<void> flipCard(int index) async {
@@ -96,11 +110,17 @@ class _MemoryCardGameState extends State<MemoryCardGame> {
         setState(() {
           cards[selectedCards[0]].isFaceUp = false;
           cards[selectedCards[1]].isFaceUp = false;
+          score -= 5; // Deduct points for mismatch
+          consecutiveMatches = 0; // Reset consecutive matches
         });
       } else {
+        consecutiveMatches++;
+        int bonus = (consecutiveMatches > 1) ? 5 * (consecutiveMatches - 1) : 0;
         setState(() {
           cards[selectedCards[0]].isMatched = true;
           cards[selectedCards[1]].isMatched = true;
+          score += 10 +
+              bonus; // Add points for match and bonus for consecutive matches
         });
       }
       selectedCards.clear();
@@ -108,12 +128,14 @@ class _MemoryCardGameState extends State<MemoryCardGame> {
     }
 
     if (cards.every((card) => card.isMatched)) {
+      timer.cancel(); // Stop the timer
       showDialog(
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
             title: const Text('Congratulations!'),
-            content: const Text('You won the game!'),
+            content: Text(
+                'You won the game in $timeElapsed seconds with a score of $score!'),
             actions: [
               TextButton(
                 onPressed: () {
@@ -141,26 +163,47 @@ class _MemoryCardGameState extends State<MemoryCardGame> {
       appBar: AppBar(
         title: const Text('Memory Card Game'),
       ),
-      body: GridView.builder(
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: gridSize,
-        ),
-        itemCount: cards.length,
-        itemBuilder: (context, index) {
-          return GestureDetector(
-            onTap: () => flipCard(index),
-            child: Card(
-              child: Center(
-                child: Text(
-                  cards[index].isFaceUp
-                      ? cards[index].front
-                      : cards[index].back,
-                  style: const TextStyle(fontSize: 30.0),
-                ),
-              ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Score: $score',
+                    style: const TextStyle(
+                        fontSize: 24, fontWeight: FontWeight.bold)),
+                Text('Time: $timeElapsed s',
+                    style: const TextStyle(
+                        fontSize: 24, fontWeight: FontWeight.bold)),
+              ],
             ),
-          );
-        },
+          ),
+          Expanded(
+            child: GridView.builder(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: gridSize,
+              ),
+              itemCount: cards.length,
+              itemBuilder: (context, index) {
+                return GestureDetector(
+                  onTap: () => flipCard(index),
+                  child: Card(
+                    color: Colors.lightGreenAccent,
+                    child: Center(
+                      child: Text(
+                        cards[index].isFaceUp
+                            ? cards[index].front
+                            : cards[index].back,
+                        style: const TextStyle(fontSize: 40.0),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
